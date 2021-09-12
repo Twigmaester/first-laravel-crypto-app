@@ -14,5 +14,11 @@ use App\Http\Controllers\CryptoController;
 |
 */
 
-Route::post('crypto', 'App\Http\Controllers\CryptoController@store');
+Route::view('login', 'login');
+Route::post('login', 'App\Http\Controllers\LoginController@authenticate');
+
+Route::get('register', 'App\Http\Controllers\RegistrationController@create');
+Route::post('register', 'App\Http\Controllers\RegistrationController@store');
+
+Route::post('crypto', 'App\Http\Controllers\CryptoController@viewPair');
 Route::view('crypto', 'getPrice');
