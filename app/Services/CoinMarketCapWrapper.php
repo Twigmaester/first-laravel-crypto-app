@@ -2,21 +2,12 @@
 
 namespace App\Services;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\ServiceProvider;
 
-class CoinMarketCapWrapper
+class CoinMarketCapWrapper extends ServiceProvider
 {
-
-
-    public static function getData($coin1, $coin2) {
-
-
-        if (Cache::has('coin_pair')) {
-            $cacheData = cache('coin_pair');
-            if ($cacheData['first_coin'] === $coin1 && $cacheData['second_coin'] === $coin2) {
-                return $cacheData;
-            }
-        }
-
+    private static function getCurl($url, $coin1, $coin2)
+    {
         $curl = curl_init();
 
         $url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest';
@@ -43,6 +34,29 @@ class CoinMarketCapWrapper
 
         $curlData = curl_exec($curl);
         $responseData = json_decode($curlData, true);
+        
+        curl_close($curl);
+
+        return $responseData;
+    }
+
+
+    public static function getData($coin1, $coin2)
+    {
+        if (Cache::has('cache_'.$coin1.'_'.$coin2))
+        {
+            $cacheData = cache('cache_'.$coin1.'_'.$coin2);
+            return $cacheData;
+        }
+
+        $url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest';
+
+        $responseData = static::getCurl($url, $coin1, $coin2);
+        
+        if ($responseData["status"]["error_code"] !== 0)
+        {
+          return $responseData["status"]["error_code"];
+        }
 
         $price = number_format($responseData["data"][$coin1]["quote"][$coin2]["price"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
         $volume = number_format($responseData["data"][$coin1]["quote"][$coin2]["volume_24h"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
@@ -54,12 +68,8 @@ class CoinMarketCapWrapper
             'volume' => $volume,
         ];
 
-        Cache::add('coin_pair', $pairData, 60);
-
-        curl_close($curl);
+        Cache::add('cache_'.$coin1.'_'.$coin2, $pairData, 60);
 
         return $pairData;
-
-
     }
 }

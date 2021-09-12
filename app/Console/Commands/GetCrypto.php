@@ -30,7 +30,23 @@ class GetCrypto extends Command
     {
         parent::__construct();
     }
+    /**
+     * Get coin pair data.
+     * 
+     * If succesfull.
+     * @return array
+     * 
+     * Else.
+     * @return int 
+     */
+    private function getCoinData()
+    {
+        $coin1 = strtoupper($this->argument('coin1'));
+        $coin2 = strtoupper($this->argument('coin2'));
+        $data = CoinMarketCapWrapper::getData($coin1, $coin2);
 
+        return $data;
+    }
     /**
      * Execute the console command.
      *
@@ -38,11 +54,7 @@ class GetCrypto extends Command
      */
     public function handle()
     {
-
-        $coin1 = strtoupper($this->argument('coin1'));
-        $coin2 = strtoupper($this->argument('coin2'));
-
-        $data = CoinMarketCapWrapper::getData($coin1, $coin2);
+        $data = $this->getCoinData();
 
         $lines = [
             'You need to use at least one valid slug as a parameter.',
@@ -51,35 +63,26 @@ class GetCrypto extends Command
             'The second paramater can be the slug of fiat currency, but you can also use another cryptocurrency',
             'You can also only use the first argument and the second will default to usd',
             'Examples of valid calls: "php artisan get:crypto", "php artisan get:crypto btc eur" and "php artisan get:crypto ada"',
-            'The first example will default to btc/usd, the second will be btc/eur and the third ada/usd'
+            'The first example will default to btc/usd, the second will be btc/eur and the third ada/usd',
           ];
 
-        function printLines($msgs) {
-            foreach($msgs as $msg) {
-            echo $msg . PHP_EOL;
+        if(!is_array($data))
+        {
+            foreach($lines as $line)
+            {
+            $this->error($line);
             }
-            }
-
-        if ($data["status"]["error_code"] !== 0) {
-
-            printLines($lines);
-
             return;
         }
 
-        $price = number_format($data["data"][$coin1]["quote"][$coin2]["price"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
-        $volume = number_format($data["data"][$coin1]["quote"][$coin2]["volume_24h"], $decimals = 2, $decimal_separator = "," , $thousands_separator = ".");
+        $coin1 = $data['first_coin'];
+        $coin2 = $data['second_coin'];
+        $price = $data['price'];
+        $volume = $data['volume'];
 
-        function displayCoinData($coin1, $coin2, $price, $volume) {
+        $this->info("The price of $coin1 is $price $coin2");
+        $this->info("The volume is $volume $coin2");
 
-            $line = '%s currently priced at %s %s.';
-            $line .= PHP_EOL;
-            $line .= 'Todays volume is %s %s';
-            $line .= PHP_EOL;
-            echo sprintf($line, $coin1, $price, $coin2, $volume, $coin2);
-            }
-
-            displayCoinData($coin1, $coin2, $price, $volume);
-
+        return;
     }
 }
